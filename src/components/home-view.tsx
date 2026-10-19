@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import MemberPortal, { type SessionMember } from "@/components/member-portal";
+import MemberPortal from "@/components/member-portal";
 import LegalDocumentView, { type LegalView } from "@/components/legal-document";
+import { useLogout, useSession } from "@/hooks/use-auth";
 import { copy } from "@/lib/copy";
 import styles from "@/app/page.module.css";
 
@@ -31,25 +32,19 @@ const FEATURES = [
 ];
 
 export default function HomeView() {
-  const [member, setMember] = useState<SessionMember | null>(null);
+  const { member } = useSession();
   const [legalView, setLegalView] = useState<LegalView | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuCloseRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/auth/session")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.member) {
-          setMember(data.member);
-          setMenuOpen(false);
-          document.title = "Member Portal | Spotter";
-        }
-      })
-      .catch(() => {});
-  }, []);
+    document.title = member
+      ? "Member Portal | Spotter"
+      : "Spotter | Official Gym Member Portal";
+  }, [member]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -92,11 +87,13 @@ export default function HomeView() {
     };
   }, [menuOpen]);
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/session", { method: "POST" });
-    setMember(null);
-    setMenuOpen(false);
-    document.title = "Spotter | Official Gym Member Portal";
+  const logout = useLogout();
+
+  const handleLogout = () => {
+    setLogoutError("");
+    logout.mutate(undefined, {
+      onError: () => setLogoutError(copy.errors.signOutFailed),
+    });
   };
 
   const openLegalView = (view: LegalView) => {
@@ -221,6 +218,11 @@ export default function HomeView() {
 
       {/* Main Content Area */}
       <main className={styles.mainContent}>
+        {logoutError && (
+          <div className={styles.logoutAlert} role="alert">
+            {logoutError}
+          </div>
+        )}
         {legalView ? (
           <LegalDocumentView
             view={legalView}
@@ -230,7 +232,7 @@ export default function HomeView() {
         ) : member ? (
           /* Active Logged-In Member View */
           <section>
-            <MemberPortal member={member} onLogout={handleLogout} />
+            <MemberPortal member={member} />
           </section>
         ) : (
           /* Minimalist Marketing & App Overview */

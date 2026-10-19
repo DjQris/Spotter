@@ -27,6 +27,25 @@ Reason: without httpOnly any script on the page can read the session. Without
 secure it travels in clear text on a bad network. Lax is what allows the return
 trip from the payment gateway to keep the session alive.
 
+## The proxy
+
+src/proxy.ts is the only middleware. It runs on page routes, never on /api or
+static files, and it does not read the cookie itself: it hands the request to
+getMemberSessionFromRequest in src/server/auth/session.ts, which stays the only
+place the cookie is read.
+
+- No valid session and a member-only path: redirect to /auth. No member-only
+  paths exist yet; they are listed in the proxy and the list grows with them.
+- A valid session: the member is attached to the request as x-member-id and
+  x-member-name (percent-encoded, decode before display). The proxy deletes any
+  client-sent x-member-* headers first, so the values always come from the
+  resolved session.
+- These headers are informational for server code. Nothing may trust them for
+  an access decision or a data read; every read resolves the session through
+  session.ts.
+- The proxy lookup is read-only. Sliding the session's last-used time and
+  cookie stays in getMemberSession.
+
 ## Sign up
 
 Four fields, all required: full name, email, password, member number.
@@ -50,6 +69,28 @@ insensitive.
 Reason: a member who signs up as Chioma@example.com and logs in as
 chioma@example.com is the same person and must not get a second account.
 
+## Email verification
+
+- A member who signs up is logged in straight away. Her dashboard shows a
+  banner until her email is verified.
+- The code is six digits generated with randomBytes, stored hashed with
+  Argon2id, and expires two minutes after it is stored. One active code per
+  member.
+- A code is stored only after its email is sent. A send that fails leaves the
+  previous code valid. Sign up stores its code only when none is stored, so it
+  never replaces a code a resend issued. A resend for a verified email does
+  nothing.
+- The code is checked against the member ID from the session, never from the
+  request. Wrong or expired codes count toward the IP limit. Verifying an email
+  that is already verified returns success, so a retry after a lost response is
+  not shown to the member as a wrong code.
+- Sign up sends the welcome email, in the background. The verification email is
+  sent automatically the first time the dashboard loads for an unverified
+  member with no code stored, and retried on later loads until one is stored.
+  The banner's resend asks for a new code. Verification is a banner only:
+  nothing is blocked while an email is unverified. The copy states the two
+  minute window; change the copy in the same commit as the window.
+
 ## Passwords
 
 - Minimum eight characters. No maximum below 128.
@@ -57,10 +98,17 @@ chioma@example.com is the same person and must not get a second account.
 - Hashed with Argon2id.
 - Never stored in plain form, never logged, never returned in any response or
   error, never sent by email.
+- Checked against the Pwned Passwords corpus at sign up and at password change.
+  Only the first five characters of the SHA-1 hash leave the server. Any listed
+  password is refused. If the corpus cannot be reached, the password is
+  accepted and the failure is logged.
 
 Reason for no composition rules: they push people toward one predictable
 pattern and toward writing the password down. Length is the control that
 matters.
+
+Reason for the corpus check: a password already listed in a public breach is
+the cheapest guess for anyone attacking the account.
 
 Argon2id needs a package. Ask before adding it, per AGENTS.md.
 
@@ -72,7 +120,9 @@ Email and password. Nothing else. No code, no PIN, no device check.
 
 - Five consecutive failed logins for one email lock that account for fifteen
   minutes. While locked, the correct password also fails.
-- Twenty failed logins from one IP address in one hour are refused for one hour.
+- Five failed attempts from one IP address in one hour, across sign up, log in
+  and password change, are refused for one hour. The counter lives in memory
+  and resets when the server restarts.
 
 Reason: the email and password pair is the only thing standing in front of a
 member's records, so the brute force limit is the whole defence.

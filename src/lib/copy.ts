@@ -33,10 +33,39 @@ export const copy = {
       "That member number already has an account. Ask the front desk for help.",
     emailAlreadyRegistered: "That email is already registered.",
     passwordMinLength: "Use at least eight characters.",
+    passwordBreached:
+      "That password has appeared in a data breach. Choose a different one.",
+  },
+  verification: {
+    bannerTitle: "Verify your email",
+    bannerPrompt: (email: string) =>
+      `We sent a six digit code to ${email}. Enter it below to verify your email.`,
+    codeLabel: "Six digit code",
+    verifyButton: "Verify",
+    verifying: "Checking...",
+    resendButton: "Send a new code",
+    resending: "Sending...",
+    resendSent: (email: string) => `We sent a new code to ${email}.`,
+    invalidCode: "That code is wrong or has expired. Send a new code.",
+    sendFailed: "We could not send the code right now. Try again.",
+    signInRequired: "Sign in to verify your email.",
+  },
+  deletion: {
+    openButton: "Delete account",
+    warning:
+      "Your account locks now. After seven days your data is deleted and your identity is removed. Payment records are kept for seven years. This cannot be undone.",
+    confirmPrompt: "Enter your password to confirm.",
+    confirmButton: "Delete my account",
+    cancelButton: "Keep my account",
+    deleting: "Deleting...",
+    passwordWrong: "That password is wrong.",
+    accountScheduled: "This account is scheduled for deletion.",
+    signInRequired: "Sign in to continue.",
   },
   login: {
     failed: "That email and password do not match.",
     lockout: "Too many attempts. Try again in fifteen minutes.",
+    ipLockout: "Too many attempts. Try again in an hour.",
   },
   tempPassword: {
     prompt: "Set a new password to continue.",
@@ -77,6 +106,7 @@ export const copy = {
   errors: {
     recordsUnreachable: "I cannot reach the gym's records right now",
     privateRecordsUnreachable: "I cannot read your records right now",
+    signOutFailed: "We could not sign you out. Try again.",
   },
   cardAge: {
     lastConfirmed: (date: string) => `This was last confirmed on ${date}.`,
@@ -94,6 +124,28 @@ export const copy = {
   marketing: {
     heroSubtitleLead: "Check in, view your records and balance,",
     heroSubtitleTail: "and get verified gym answers.",
+  },
+  welcomeEmail: {
+    subject: "Welcome to Spotter",
+    greeting: (name: string) => `Hi ${name},`,
+    heading: "Welcome to Spotter",
+    intro: "Your account is ready. Spotter is your gym member app.",
+    features: [
+      "Check in at the gym with a six digit code.",
+      "View your attendance and balance.",
+      "Ask about the gym and get answers from the gym's records.",
+    ],
+    footer:
+      "You received this email because you created a Spotter account. If this was not you, speak to the front desk.",
+  },
+  verificationEmail: {
+    subject: "Verify your email for Spotter",
+    greeting: (name: string) => `Hi ${name},`,
+    heading: "Verify your email",
+    intro: "Enter this code in the app to verify your email address.",
+    expiry: "This code expires in two minutes.",
+    footer:
+      "You received this email because a Spotter account was created with this address. If this was not you, ignore this email.",
   },
 } as const;
 
@@ -123,7 +175,7 @@ export const legalCopy: {
   },
   privacy: {
     title: "Privacy Policy",
-    lastUpdated: "Last updated: 6 October 2026",
+    lastUpdated: "Last updated: 14 October 2026",
     sections: [
       {
         heading: "Who controls your data",
@@ -247,7 +299,7 @@ export const legalCopy: {
           {
             type: "p",
             items: [
-              "To ask for a copy or a deletion, speak to the front desk officer or the owner. Some financial records must be kept for seven years by law.",
+              "To delete your account, use the Delete account control on your dashboard. Your account locks immediately and your data is deleted seven days later. To ask for a copy, speak to the front desk officer or the owner. Some financial records must be kept for seven years by law.",
             ],
           },
         ],

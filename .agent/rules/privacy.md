@@ -115,9 +115,32 @@ answers for a breach.
 - Member identity records, including email and password hash: while active, and
   twenty four months after cancellation.
 
-Deletion is computed from timestamps the models already carry. No retention
-field is needed and none should be added. The deletion operation itself is not
-in version one.
+## Deletion
+
+A member can request deletion from her dashboard. The request locks the account
+immediately: every session is revoked, no session resolves for her, and login is
+refused. There is no cancel.
+
+Seven days after the request, the nightly job purges her. Sessions, check in
+codes, attendance, question logs, wrong answer reports, answer audits and her
+access log rows are deleted. Her member row is anonymized: name, email, phone,
+password hash and every verification field are cleared, the email is freed for
+reuse, and the row is stamped deleted. The row itself stays, because payment
+records and ledger entries must remain tied to it; they are kept for seven years
+and are never deleted.
+
+The window is seven days. It lives in one constant in the purge module; change
+the copy in rules/copy.md in the same commit.
+
+The purge is a system operation, not a member read. It selects only member IDs
+whose request is older than the window, never returns member data, and is the
+one read across members besides the access log detector.
+
+The member's account creation timestamp is kept after the purge, so a purged
+member number can never be claimed by a new sign up.
+
+Member rows carry two fields for this flow and nothing else:
+`deletionRequestedAt` and `deletedAt`.
 
 ## Exit
 
@@ -127,5 +150,4 @@ systems within thirty days of the export being confirmed.
 
 ## OPEN
 
-The export format and the deletion mechanism are not specified. Ask before
-building either.
+The exit export format is not specified. Ask before building it.

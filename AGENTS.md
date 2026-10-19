@@ -46,8 +46,7 @@ Success metrics and the launch gates are product facts, not code rules. They liv
 ## Not in scope for the MVP
 
 - Class booking and capacity.
-- The app never initiates contact with a member. No message, no reminder, no nudge, no follow up, in any channel.
-- Email sending of any kind, including password reset links. Password reset is an owner issued temporary password.
+- The app never initiates contact with a member, except by email. No other message, no reminder, no nudge, no follow up, in any channel.
 - Trainer chat or any member to staff messaging inside the app.
 - Progress tracking, weight logs, body metrics.
 - Referrals, streaks, leaderboards.
@@ -70,6 +69,7 @@ Later version features exist and are listed in docs/spotter-prd-v3.md. Do not bu
 - pgvector for vector storage and similarity search.
 - Flutterwave for payments. Any reference to another payment gateway in any document in this repo is void. Do not copy fee figures or webhook shapes from those references.
 - Gemini free tier for the router model, the embedding model, and the answer model. All model calls go through a single interface module so the provider can be swapped. Rate limits and timeouts live in rules/ai.md.
+- nodemailer over SMTP is the only way this project sends email. Never add another email library or a provider SDK. Always import the mailer module, src/server/email/mailer.ts, which reads the variables in rules/env.md.
 
 ## Folder map
 
@@ -82,6 +82,7 @@ Later version features exist and are listed in docs/spotter-prd-v3.md. Do not bu
 - src/server/checkin/verifier.ts is the only place a check in code is consumed.
 - src/server/retrieval/search.ts holds the vector query. It is one of only two raw SQL files.
 - src/server/retrieval/index-card.ts holds chunk writes. It is the other raw SQL file.
+- src/server/email/mailer.ts sends outgoing mail.
 - prisma/ holds the schema and the migrations.
 - rules/ holds the rules files listed below.
 - docs/ holds the PRD.

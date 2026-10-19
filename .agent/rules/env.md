@@ -78,6 +78,17 @@ Check in
                         exists. The keypad sends it in a header. Until then it
                         is unset and the verify endpoint is not deployed.
 
+Email
+
+Read only by src/server/email/mailer.ts, through src/lib/env.ts.
+
+- SMTP_HOST             not secret. The relay the mail leaves through.
+- SMTP_PORT             not secret. Defaults to 587 when unset. Port 465 means
+                        implicit TLS, anything else means STARTTLS.
+- SMTP_USER             secret. The mailbox or API user.
+- SMTP_PASS             secret. The mailbox password or API key.
+- SMTP_FROM             not secret. The From address a member sees.
+
 ## Adding a variable
 
 Ask first. Name it, say which module reads it, say whether it is secret, and add

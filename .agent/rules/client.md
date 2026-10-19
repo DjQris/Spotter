@@ -31,6 +31,11 @@ questions, and the member's last status payload.
 
 Status renders from cache first and revalidates in the background.
 
+In memory, the session query holds the member's status for the life of the tab.
+It is fetched once per page load and changes only when an auth action does
+(login, sign up, log out, delete account, verify email). No refetch on window
+focus, no polling.
+
 ## What is never cached
 
 Answers. Not shared answers, not private answers, not for a minute.

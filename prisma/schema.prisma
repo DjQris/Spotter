@@ -7,3 +7,428 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
+enum Tier {
+  BASIC
+  PREMIUM
+}
+
+enum StaffRole {
+  OWNER
+  STAFF
+}
+
+enum PaymentPurpose {
+  RENEWAL
+  ARREARS
+}
+
+enum PaymentChannel {
+  IN_APP
+  CASH
+  TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  ABANDONED
+}
+
+enum CheckInSource {
+  CODE
+  MANUAL
+}
+
+enum CardStatus {
+  DRAFT
+  APPROVED
+  RETIRED
+}
+
+enum CardVersionStatus {
+  PENDING_APPROVAL
+  APPROVED
+}
+
+enum CardCategory {
+  TIMETABLE
+  PRICES
+  RULES_ACCESS_HOURS
+  GUEST_POLICY
+  PAUSE_CANCELLATION
+  TRAINING_PLAN
+  TRAINER_GUIDANCE
+}
+
+enum QuestionIntent {
+  SHARED_QUESTION
+  PRIVATE_ATTENDANCE
+  PRIVATE_BALANCE
+  PRIVATE_MEMBERSHIP
+  REFUSED_POLICY
+  UNCLEAR
+}
+
+enum QuestionOutcome {
+  ANSWERED
+  REFUSED_POLICY
+  REFUSED_NO_RECORD
+  UNCLEAR
+  BLOCKED_UNGROUNDED
+  ERROR
+}
+
+enum AuditVerdict {
+  CORRECT
+  WRONG
+}
+
+model Gym {
+  id          String           @id @default(cuid())
+  name        String
+  timezone    String
+  openingTime String
+  closingTime String
+  graceDays   Int
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  members     Member[]
+  staff       Staff[]
+  plans       MembershipPlan[]
+  cards       Card[]
+}
+
+// PRIVATE. Fetched by exact member ID only, never searched across members.
+model Member {
+  id                    String             @id @default(cuid())
+  gymId                 String
+  gym                   Gym                @relation(fields: [gymId], references: [id])
+  name                  String
+  memberNumber          String
+  phone                 String?
+  tier                  Tier               @default(BASIC)
+  expiryDate            DateTime
+  cancelledAt           DateTime?
+  email                 String?            @unique
+  passwordHash          String?
+  tempPasswordHash      String?
+  tempPasswordExpiresAt DateTime?
+  passwordChangedAt     DateTime?
+  accountCreatedAt      DateTime?
+  privacyAcceptedAt     DateTime?
+  emailVerifiedAt       DateTime?
+  emailVerificationCodeHash  String?
+  emailVerificationExpiresAt DateTime?
+  deletionRequestedAt   DateTime?
+  deletedAt             DateTime?
+  failedLoginCount      Int                @default(0)
+  lockedUntil           DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  sessions              MemberSession[]
+  checkIns              CheckIn[]
+  checkInCodes          CheckInCode[]
+  ledgerEntries         LedgerEntry[]
+  payments              Payment[]
+  paymentAttempts       PaymentAttempt[]
+  membershipChanges     MembershipChange[]
+  questionLogs          QuestionLog[]
+
+  @@unique([gymId, memberNumber])
+}
+
+// PRIVATE. Fetched by exact member ID or single session token hash only.
+model MemberSession {
+  id                 String    @id @default(cuid())
+  memberId           String
+  member             Member    @relation(fields: [memberId], references: [id])
+  tokenHash          String    @unique
+  mustChangePassword Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  lastUsedAt         DateTime  @default(now())
+  expiresAt          DateTime
+  revokedAt          DateTime?
+
+  @@index([memberId])
+}
+
+model Staff {
+  id                    String             @id @default(cuid())
+  gymId                 String
+  gym                   Gym                @relation(fields: [gymId], references: [id])
+  name                  String
+  email                 String             @unique
+  passwordHash          String
+  role                  StaffRole
+  whatsappNumber        String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  sessions              StaffSession[]
+  deskShifts            DeskShift[]
+  cardVersionsCreated   CardVersion[]      @relation("CardVersionCreatedBy")
+  cardVersionsApproved  CardVersion[]      @relation("CardVersionApprovedBy")
+  checkInsRecorded      CheckIn[]          @relation("CheckInRecordedBy")
+  paymentsRecorded      Payment[]          @relation("PaymentRecordedBy")
+  ledgerEntriesRecorded LedgerEntry[]      @relation("LedgerEntryRecordedBy")
+  membershipChanges     MembershipChange[] @relation("MembershipChangeBy")
+  audits                AnswerAudit[]
+}
+
+model StaffSession {
+  id         String    @id @default(cuid())
+  staffId    String
+  staff      Staff     @relation(fields: [staffId], references: [id])
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  @@index([staffId])
+}
+
+model DeskShift {
+  id        String   @id @default(cuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id])
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+
+  @@index([startsAt, endsAt])
+}
+
+model MembershipPlan {
+  id           String   @id @default(cuid())
+  gymId        String
+  gym          Gym      @relation(fields: [gymId], references: [id])
+  tier         Tier
+  priceKobo    Int
+  durationDays Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([gymId, tier])
+}
+
+model Card {
+  id                 String        @id @default(cuid())
+  gymId              String
+  gym                Gym           @relation(fields: [gymId], references: [id])
+  title              String
+  category           CardCategory
+  minTier            Tier
+  status             CardStatus    @default(DRAFT)
+  reviewIntervalDays Int
+  lastConfirmedAt    DateTime?
+  currentVersionId   String?       @unique
+  currentVersion     CardVersion?  @relation("CardCurrentVersion", fields: [currentVersionId], references: [id])
+  versions           CardVersion[] @relation("CardVersions")
+  chunks             CardChunk[]
+  questionLogs       QuestionLog[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([status, minTier])
+}
+
+model CardVersion {
+  id            String            @id @default(cuid())
+  cardId        String
+  card          Card              @relation("CardVersions", fields: [cardId], references: [id])
+  body          String
+  status        CardVersionStatus @default(PENDING_APPROVAL)
+  createdById   String
+  createdBy     Staff             @relation("CardVersionCreatedBy", fields: [createdById], references: [id])
+  approvedById  String?
+  approvedBy    Staff?            @relation("CardVersionApprovedBy", fields: [approvedById], references: [id])
+  approvedAt    DateTime?
+  chunks        CardChunk[]
+  currentForCard Card?           @relation("CardCurrentVersion")
+  createdAt     DateTime          @default(now())
+
+  @@index([cardId, status])
+}
+
+model CardChunk {
+  id            String      @id @default(cuid())
+  cardId        String
+  card          Card        @relation(fields: [cardId], references: [id])
+  cardVersionId String
+  cardVersion   CardVersion @relation(fields: [cardVersionId], references: [id])
+  chunkIndex    Int
+  text          String
+  tier          Tier
+  embedding     Unsupported("vector(768)")
+  createdAt     DateTime    @default(now())
+
+  @@index([cardVersionId])
+  @@index([cardId, tier])
+}
+
+// PRIVATE. Fetched by exact member ID only, except the verifier lookup,
+// which is by code digits and returns at most one active row.
+model CheckInCode {
+  id         String    @id @default(cuid())
+  memberId   String
+  member     Member    @relation(fields: [memberId], references: [id])
+  code       String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  consumedAt DateTime?
+  consumedBy String?
+  checkIn    CheckIn?
+
+  @@index([memberId, createdAt])
+  @@index([code, consumedAt, expiresAt])
+}
+
+// PRIVATE. Fetched by exact member ID only, never searched across members.
+model CheckIn {
+  id                String         @id @default(cuid())
+  memberId          String
+  member            Member         @relation(fields: [memberId], references: [id])
+  date              DateTime       @db.Date
+  occurredAt        DateTime       @default(now())
+  source            CheckInSource
+  checkInCodeId     String?        @unique
+  checkInCode       CheckInCode?   @relation(fields: [checkInCodeId], references: [id])
+  recordedByStaffId String?
+  recordedBy        Staff?         @relation("CheckInRecordedBy", fields: [recordedByStaffId], references: [id])
+  createdAt         DateTime       @default(now())
+
+  @@unique([memberId, date])
+}
+
+// PRIVATE. Fetched by exact member ID only, never searched across members.
+model PaymentAttempt {
+  id             String         @id @default(cuid())
+  memberId       String
+  member         Member         @relation(fields: [memberId], references: [id])
+  idempotencyKey String         @unique
+  reference      String         @unique
+  purpose        PaymentPurpose
+  amountKobo     Int
+  currency       String         @default("NGN")
+  status         PaymentStatus  @default(PENDING)
+  failureReason  String?
+  resolvedAt     DateTime?
+  payment        Payment?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([memberId, status])
+}
+
+// PRIVATE. Fetched by exact member ID only, never searched across members.
+model Payment {
+  id                String             @id @default(cuid())
+  memberId          String
+  member            Member             @relation(fields: [memberId], references: [id])
+  attemptId         String?            @unique
+  attempt           PaymentAttempt?    @relation(fields: [attemptId], references: [id])
+  reference         String             @unique
+  gatewayReference  String?            @unique
+  amountKobo        Int
+  currency          String             @default("NGN")
+  purpose           PaymentPurpose
+  channel           PaymentChannel
+  paidAt            DateTime
+  recordedByStaffId String?
+  recordedBy        Staff?             @relation("PaymentRecordedBy", fields: [recordedByStaffId], references: [id])
+  ledgerEntries     LedgerEntry[]
+  membershipChanges MembershipChange[]
+  createdAt         DateTime           @default(now())
+
+  @@index([memberId, paidAt])
+}
+
+// PRIVATE. Fetched by exact member ID only, never searched across members.
+model LedgerEntry {
+  id                String          @id @default(cuid())
+  memberId          String
+  member            Member          @relation(fields: [memberId], references: [id])
+  amountKobo        Int
+  channel           PaymentChannel?
+  reason            String
+  occurredAt        DateTime
+  paymentId         String?
+  payment           Payment?        @relation(fields: [paymentId], references: [id])
+  recordedByStaffId String?
+  recordedBy        Staff?          @relation("LedgerEntryRecordedBy", fields: [recordedByStaffId], references: [id])
+  createdAt         DateTime        @default(now())
+
+  @@index([memberId, occurredAt])
+}
+
+// PRIVATE. Fetched by exact member ID only, never searched across members.
+model MembershipChange {
+  id               String   @id @default(cuid())
+  memberId         String
+  member           Member   @relation(fields: [memberId], references: [id])
+  oldTier          Tier?
+  newTier          Tier?
+  oldExpiryDate    DateTime?
+  newExpiryDate    DateTime?
+  reason           String
+  changedByStaffId String?
+  changedBy        Staff?   @relation("MembershipChangeBy", fields: [changedByStaffId], references: [id])
+  paymentId        String?
+  payment          Payment? @relation(fields: [paymentId], references: [id])
+  createdAt        DateTime @default(now())
+
+  @@index([memberId, createdAt])
+}
+
+// PRIVATE. Fetched by exact member ID only, never searched across members.
+model QuestionLog {
+  id                String             @id @default(cuid())
+  memberId          String
+  member            Member             @relation(fields: [memberId], references: [id])
+  question          String
+  intent            QuestionIntent
+  outcome           QuestionOutcome
+  topScore          Float?
+  cardId            String?
+  card              Card?              @relation(fields: [cardId], references: [id])
+  answerText        String?
+  askedAt           DateTime           @default(now())
+  wrongAnswerReport WrongAnswerReport?
+  audits            AnswerAudit[]
+
+  @@index([outcome, askedAt])
+  @@index([memberId, askedAt])
+}
+
+model WrongAnswerReport {
+  id            String      @id @default(cuid())
+  questionLogId String      @unique
+  questionLog   QuestionLog @relation(fields: [questionLogId], references: [id])
+  note          String?
+  createdAt     DateTime    @default(now())
+}
+
+model AnswerAudit {
+  id            String      @id @default(cuid())
+  questionLogId String
+  questionLog   QuestionLog @relation(fields: [questionLogId], references: [id])
+  auditedById   String
+  auditedBy     Staff       @relation(fields: [auditedById], references: [id])
+  verdict       AuditVerdict
+  auditedAt     DateTime    @default(now())
+
+  @@index([auditedAt])
+}
+
+// PRIVATE. Written on every private read.
+model PrivateAccessLog {
+  id              String   @id @default(cuid())
+  sessionMemberId String
+  targetMemberId  String
+  functionName    String
+  createdAt       DateTime @default(now())
+
+  @@index([sessionMemberId, targetMemberId])
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLogin, useResetPassword, useSignUp } from "@/hooks/use-auth";
 import { copy } from "@/lib/copy";
 import styles from "@/app/auth.module.css";
 
@@ -12,8 +13,12 @@ const LOGIN_HREF = "/auth";
 const SIGNUP_HREF = "/auth?view=signup";
 const RESET_HREF = "/auth?view=reset";
 
-function useRequiredField(validate?: (value: string) => string, realtime = false) {
-  const [value, setValue] = useState("");
+function useRequiredField(
+  validate?: (value: string) => string,
+  realtime = false,
+  initialValue = ""
+) {
+  const [value, setValue] = useState(initialValue);
   const [error, setError] = useState("");
 
   const getError = (nextValue: string): string => {
@@ -122,32 +127,21 @@ function LoginView() {
   const password = useRequiredField();
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [loading, setLoading] = useState(false);
+  const login = useLogin();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    setLoading(true);
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.value, password: password.value }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(data.error || copy.login.failed);
-      } else {
-        router.push("/");
-        router.refresh();
+    login.mutate(
+      { email: email.value.trim(), password: password.value.trim() },
+      {
+        onSuccess: (data) => {
+          router.push(data.session?.mustChangePassword ? "/auth?view=reset" : "/");
+        },
+        onError: (error) => setErrorMsg(error.message || copy.login.failed),
       }
-    } catch {
-      setErrorMsg(copy.login.failed);
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   return (
@@ -178,7 +172,7 @@ function LoginView() {
               required
               autoComplete="email"
               value={email.value}
-              onChange={(e) => email.handleChange(e.target.value)}
+              onChange={(e) => email.handleChange(e.target.value.toLowerCase())}
               onBlur={email.handleBlur}
               aria-invalid={email.error ? true : undefined}
               aria-describedby={email.error ? "login-email-error" : undefined}
@@ -193,7 +187,14 @@ function LoginView() {
               <label htmlFor="login-password" className={`text-label-medium ${styles.fieldLabel}`}>
                 Password
               </label>
-              <Link href={RESET_HREF} className={`text-label-small ${styles.secondaryLink}`}>
+              <Link
+                href={
+                  email.value.trim()
+                    ? `${RESET_HREF}&email=${encodeURIComponent(email.value.trim())}`
+                    : RESET_HREF
+                }
+                className={`text-label-small ${styles.secondaryLink}`}
+              >
                 Forgot password?
               </Link>
             </div>
@@ -224,10 +225,10 @@ function LoginView() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={login.isPending}
             className={`text-label-large ${styles.submitButton}`}
           >
-            {loading ? "Checking..." : "Log In"}
+            {login.isPending ? "Checking..." : "Log In"}
           </button>
         </form>
 
@@ -277,7 +278,7 @@ function validateMemberNumber(value: string): string {
 }
 
 function validatePassword(value: string): string {
-  if (value.length < 8) {
+  if (value.trim().length < 8) {
     return copy.signup.passwordMinLength;
   }
 
@@ -294,16 +295,16 @@ function SignUpView() {
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [showTermsSignal, setShowTermsSignal] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [loading, setLoading] = useState(false);
+  const signUp = useSignUp();
 
   const fieldsValid =
     name.isValid && email.isValid && memberNumber.isValid && password.isValid;
   const formComplete = fieldsValid && acceptedPrivacy;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (loading) {
+    if (signUp.isPending) {
       return;
     }
 
@@ -330,32 +331,19 @@ function SignUpView() {
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.value,
-          email: email.value,
-          memberNumber: memberNumber.value,
-          password: password.value,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(data.error || copy.signup.memberNumberNotFound);
-      } else {
-        router.push("/");
-        router.refresh();
+    signUp.mutate(
+      {
+        name: name.value,
+        email: email.value,
+        memberNumber: memberNumber.value,
+        password: password.value.trim(),
+        acceptedPrivacy,
+      },
+      {
+        onSuccess: () => router.push("/"),
+        onError: (error) => setErrorMsg(error.message || copy.signup.memberNumberNotFound),
       }
-    } catch {
-      setErrorMsg(copy.signup.memberNumberNotFound);
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   return (
@@ -406,7 +394,7 @@ function SignUpView() {
               required
               autoComplete="email"
               value={email.value}
-              onChange={(e) => email.handleChange(e.target.value)}
+              onChange={(e) => email.handleChange(e.target.value.toLowerCase())}
               onBlur={email.handleBlur}
               aria-invalid={email.error ? true : undefined}
               aria-describedby={email.error ? "signup-email-error" : undefined}
@@ -511,13 +499,13 @@ function SignUpView() {
 
           <button
             type="submit"
-            aria-disabled={loading || !formComplete}
+            aria-disabled={signUp.isPending || !formComplete}
             aria-describedby={!formComplete ? "signup-submit-hint" : undefined}
             className={`text-label-large ${styles.submitButton}${
-              loading || !formComplete ? ` ${styles.submitButtonDisabled}` : ""
+              signUp.isPending || !formComplete ? ` ${styles.submitButtonDisabled}` : ""
             }`}
           >
-            {loading ? "Creating Account..." : "Create Account"}
+            {signUp.isPending ? "Creating Account..." : "Create Account"}
           </button>
           <span id="signup-submit-hint" className={styles.srOnly}>
             {copy.validation.createAccountHint}
@@ -537,51 +525,40 @@ function SignUpView() {
   );
 }
 
-function ResetPasswordView() {
-  const email = useRequiredField();
+function ResetPasswordView({ initialEmail }: { initialEmail?: string }) {
+  const email = useRequiredField(undefined, false, initialEmail ?? "");
   const tempPassword = useRequiredField();
   const newPassword = useRequiredField();
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [loading, setLoading] = useState(false);
+  const resetPassword = useResetPassword();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (newPassword.value.length < 8) {
+    if (newPassword.value.trim().length < 8) {
       setErrorMsg(copy.signup.passwordMinLength);
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.value,
-          tempPassword: tempPassword.value,
-          newPassword: newPassword.value,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(data.error || copy.login.failed);
-      } else {
-        setSuccessMsg(copy.tempPassword.success);
-        tempPassword.reset();
-        newPassword.reset();
+    resetPassword.mutate(
+      {
+        email: email.value,
+        tempPassword: tempPassword.value.trim(),
+        newPassword: newPassword.value.trim(),
+      },
+      {
+        onSuccess: () => {
+          setSuccessMsg(copy.tempPassword.success);
+          tempPassword.reset();
+          newPassword.reset();
+        },
+        onError: (error) => setErrorMsg(error.message || copy.login.failed),
       }
-    } catch {
-      setErrorMsg(copy.login.failed);
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   return (
@@ -627,7 +604,7 @@ function ResetPasswordView() {
                   required
                   autoComplete="email"
                   value={email.value}
-                  onChange={(e) => email.handleChange(e.target.value)}
+                  onChange={(e) => email.handleChange(e.target.value.toLowerCase())}
                   onBlur={email.handleBlur}
                   aria-invalid={email.error ? true : undefined}
                   aria-describedby={email.error ? "reset-email-error" : undefined}
@@ -693,10 +670,10 @@ function ResetPasswordView() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={resetPassword.isPending}
                 className={`text-label-large ${styles.submitButton}`}
               >
-                {loading ? "Updating..." : "Update Password"}
+                {resetPassword.isPending ? "Updating..." : "Update Password"}
               </button>
             </form>
           )}
@@ -715,13 +692,19 @@ function ResetPasswordView() {
   );
 }
 
-export default function AuthView({ view }: { view: AuthViewKind }) {
+export default function AuthView({
+  view,
+  initialEmail,
+}: {
+  view: AuthViewKind;
+  initialEmail?: string;
+}) {
   if (view === "signup") {
     return <SignUpView />;
   }
 
   if (view === "reset") {
-    return <ResetPasswordView />;
+    return <ResetPasswordView initialEmail={initialEmail} />;
   }
 
   return <LoginView />;

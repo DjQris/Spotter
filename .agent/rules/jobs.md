@@ -25,8 +25,9 @@ a schedule that should happen when a member acts.
 The job is a route handler under src/app/api/jobs/, with the logic in
 src/server/jobs/.
 
-The endpoint requires the shared secret in a request header. It never accepts it
-in a query string, and it rejects anything without it.
+The endpoint requires the shared secret in a request header, sent as
+`Authorization: Bearer {CRON_SECRET}`. It never accepts it in a query string,
+and it rejects anything without it.
 
 Reason: a query string lands in server logs, browser history and referrer
 headers. A public URL that mutates data is an open door.
@@ -41,7 +42,7 @@ write a job that reads a local time and assumes the server agrees.
 
 ## The nightly sweep
 
-Runs at three in the morning, gym local time. Four tasks in one run.
+Runs at three in the morning, gym local time. Five tasks in one run.
 
 1. Marks any payment attempt still pending after twenty four hours as abandoned
    and surfaces it to the owner. It never marks one failed, because the money
@@ -52,6 +53,8 @@ Runs at three in the morning, gym local time. Four tasks in one run.
    differs from the target member ID. Surfaces any such row to the owner and to
    the developer.
 4. Computes the counts on the owner's weekly review page.
+5. Purges members whose deletion request is older than seven days. See
+   rules/privacy.md.
 
 Task 2 is housekeeping only. An expired code is already unusable, because the
 verifier checks the timestamp on every attempt. The job removes the rows so the
@@ -82,9 +85,6 @@ night it does not run.
 
 Check in code expiry is not enforced by a job. The verifier checks the
 timestamp. See rules/checkin.md.
-
-Retention deletion for member data is a later operation, not in this job. See
-rules/privacy.md.
 
 Reindexing is not a job. It happens when the owner approves a card. See
 rules/retrieval.md.

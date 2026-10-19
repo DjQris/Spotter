@@ -71,6 +71,7 @@ The last one is a number, not an error.
   "That member number already has an account. Ask the front desk for help."
   "That email is already registered."
   "Use at least eight characters."
+  "That password has appeared in a data breach. Choose a different one."
 
 The member number messages distinguish not found from already claimed, because
 both send her to the desk and the desk needs to know which one it is.
@@ -78,6 +79,9 @@ both send her to the desk and the desk needs to know which one it is.
 Reason: this is the one place where a specific error is safer than a vague one.
 A member number is not a secret, and a vague message here produces a phone call
 the desk cannot resolve.
+
+The breach message is shown under the password field on sign up and on the
+password change screen when the Pwned Passwords corpus lists the password.
 
 ## Login
 
@@ -88,12 +92,50 @@ one was wrong and never says whether the email is registered.
 
   "Too many attempts. Try again in fifteen minutes."
 
+  "Too many attempts. Try again in an hour."
+
 ## Temporary password
 
   "Set a new password to continue."
   "That temporary password has expired. Ask the front desk for a new one."
   "Ask the front desk for a temporary password to reset your account."
   "Password changed. You can now log in."
+
+## Email verification
+
+  "Verify your email"
+  "We sent a six digit code to {email}. Enter it below to verify your email."
+  "Six digit code"
+  "Verify"
+  "Checking..."
+  "Send a new code"
+  "Sending..."
+  "We sent a new code to {email}."
+  "That code is wrong or has expired. Send a new code."
+  "We could not send the code right now. Try again."
+  "Sign in to verify your email."
+
+The banner sits on the dashboard until the email is verified. Nothing is
+blocked while an email is unverified; the banner is the only prompt.
+
+## Account deletion
+
+  "Delete account"
+  "Your account locks now. After seven days your data is deleted and your
+  identity is removed. Payment records are kept for seven years. This cannot be
+  undone."
+  "Enter your password to confirm."
+  "Delete my account"
+  "Keep my account"
+  "Deleting..."
+  "That password is wrong."
+  "This account is scheduled for deletion."
+  "Sign in to continue."
+
+The first string is the dashboard control. The warning and the confirm strings
+sit with the confirm form. The scheduled message is shown when a scheduled
+member tries to log in. The last string covers a missing session on the delete
+request.
 
 ## Form validation
 
@@ -146,6 +188,8 @@ Model or retrieval unreachable:
   "I cannot reach the gym's records right now"
 Private records unreachable:
   "I cannot read your records right now"
+Sign out failed:
+  "We could not sign you out. Try again."
 
 Never return a zero when a read failed. A zero is an answer. An error is not.
 
@@ -185,6 +229,9 @@ contradict them.
 - Retention. Attendance, question logs, access logs and check in codes: twenty
   four months. Payment records and receipts: seven years. Member identity
   records: while active, and twenty four months after cancellation.
+- Account deletion. A member can request deletion from her dashboard. The
+  account locks immediately and her record is purged seven days later. Payment
+  records and receipts survive the purge for seven years.
 - A check in records a claimed arrival. It is not proof of presence, and the
   app does not open the door.
 - The terms list the never answer categories: another member, medical, whether
@@ -203,6 +250,36 @@ contradict them.
 
 Stored as heroSubtitleLead and heroSubtitleTail. The tail renders on its own
 line.
+
+## Welcome email
+
+  "Welcome to Spotter"
+  "Hi {name},"
+  "Your account is ready. Spotter is your gym member app."
+  "Check in at the gym with a six digit code."
+  "View your attendance and balance."
+  "Ask about the gym and get answers from the gym's records."
+  "You received this email because you created a Spotter account. If this was
+  not you, speak to the front desk."
+
+The subject line is the first string. The greeting carries the only
+substitution. The email is sent once, in the background, the moment the account
+is created. It is triggered by the member's own sign up, not by the gym.
+
+## Verification email
+
+  "Verify your email for Spotter"
+  "Hi {name},"
+  "Verify your email"
+  "Enter this code in the app to verify your email address."
+  "This code expires in two minutes."
+  "You received this email because a Spotter account was created with this
+  address. If this was not you, ignore this email."
+
+The subject line is the first string. The email is sent automatically the first
+time the dashboard loads for an unverified member with no code stored, and
+retried on later loads until one is stored. The banner's resend control sends
+it again.
 
 ## Tone for anything not listed
 

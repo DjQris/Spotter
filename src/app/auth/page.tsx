@@ -13,7 +13,7 @@ function parseView(value: string | string[] | undefined): AuthViewKind {
 }
 
 interface AuthPageProps {
-  searchParams: Promise<{ view?: string | string[] }>;
+  searchParams: Promise<{ view?: string | string[]; email?: string | string[] }>;
 }
 
 export async function generateMetadata({ searchParams }: AuthPageProps): Promise<Metadata> {
@@ -22,6 +22,7 @@ export async function generateMetadata({ searchParams }: AuthPageProps): Promise
 }
 
 export default async function AuthPage({ searchParams }: AuthPageProps) {
-  const { view } = await searchParams;
-  return <AuthView view={parseView(view)} />;
+  const { view, email } = await searchParams;
+  const initialEmail = Array.isArray(email) ? email[0] : email;
+  return <AuthView view={parseView(view)} initialEmail={initialEmail} />;
 }

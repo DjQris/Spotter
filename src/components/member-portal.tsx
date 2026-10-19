@@ -3,18 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { copy } from "@/lib/copy";
+import VerifyEmailBanner from "@/components/verify-email-banner";
+import { useDeleteAccount, useLogout, type SessionMember } from "@/hooks/use-auth";
 import styles from "@/app/page.module.css";
-
-export interface SessionMember {
-  memberId: string;
-  name: string;
-  email: string;
-  memberNumber: string;
-}
 
 interface MemberPortalProps {
   member: SessionMember;
-  onLogout: () => void;
 }
 
 const DEFAULT_QUESTIONS = [
@@ -28,8 +22,35 @@ const DEFAULT_QUESTIONS = [
   "Who is the trainer on duty today?",
 ];
 
-export default function MemberPortal({ member, onLogout }: MemberPortalProps) {
+export default function MemberPortal({ member }: MemberPortalProps) {
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [logoutError, setLogoutError] = useState("");
+  const logout = useLogout();
+  const deleteAccount = useDeleteAccount();
+
+  const handleLogout = () => {
+    setLogoutError("");
+    logout.mutate(undefined, {
+      onError: () => setLogoutError(copy.errors.signOutFailed),
+    });
+  };
+
+  const handleDeleteAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (deleteAccount.isPending || deletePassword.length === 0) {
+      return;
+    }
+
+    setDeleteError("");
+
+    deleteAccount.mutate(deletePassword.trim(), {
+      onError: (error) => setDeleteError(error.message || copy.deletion.passwordWrong),
+    });
+  };
 
   return (
     <section className={styles.dashboardCard} aria-labelledby="member-portal-title">
@@ -48,13 +69,22 @@ export default function MemberPortal({ member, onLogout }: MemberPortalProps) {
           </span>
           <button
             type="button"
-            onClick={onLogout}
+            onClick={handleLogout}
+            disabled={logout.isPending}
             className={styles.outlineBtn}
           >
             Sign Out
           </button>
         </div>
       </div>
+
+      {logoutError && (
+        <span role="alert" className={`text-body-small ${styles.verifyError}`}>
+          {logoutError}
+        </span>
+      )}
+
+      {!member.emailVerified && <VerifyEmailBanner email={member.email} />}
 
       {/* 6.2 Status Area: Tier, Expiry, Days trained this month, Balance */}
       <div className={styles.statusTiles}>
@@ -143,6 +173,75 @@ export default function MemberPortal({ member, onLogout }: MemberPortalProps) {
         <Link href="/auth?view=reset" className={styles.linkReset}>
           Manage Password
         </Link>
+      </div>
+
+      <div className={styles.deleteSection}>
+        {deleteOpen ? (
+          <form
+            onSubmit={handleDeleteAccount}
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            <span className="text-body-small" style={{ color: "var(--color-on-surface-variant)" }}>
+              {copy.deletion.warning}
+            </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" }}>
+              <div className={styles.verifyField}>
+                <label
+                  htmlFor="delete-account-password"
+                  className={`text-label-small ${styles.verifyLabel}`}
+                >
+                  {copy.deletion.confirmPrompt}
+                </label>
+                <input
+                  id="delete-account-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  aria-invalid={deleteError ? true : undefined}
+                  aria-describedby={deleteError ? "delete-account-error" : undefined}
+                  className={`text-body-medium ${styles.verifyInput}`}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={deleteAccount.isPending || deletePassword.length === 0}
+                className={`text-label-medium ${styles.deleteConfirmButton}`}
+              >
+                {deleteAccount.isPending ? copy.deletion.deleting : copy.deletion.confirmButton}
+              </button>
+              <button
+                type="button"
+                disabled={deleteAccount.isPending}
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setDeletePassword("");
+                  setDeleteError("");
+                }}
+                className={`text-label-medium ${styles.verifyResendButton}`}
+              >
+                {copy.deletion.cancelButton}
+              </button>
+            </div>
+            {deleteError && (
+              <span
+                id="delete-account-error"
+                role="alert"
+                className={`text-body-small ${styles.verifyError}`}
+              >
+                {deleteError}
+              </span>
+            )}
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDeleteOpen(true)}
+            className={`text-label-medium ${styles.deleteLink}`}
+          >
+            {copy.deletion.openButton}
+          </button>
+        )}
       </div>
     </section>
   );
