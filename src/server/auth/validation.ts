@@ -19,6 +19,11 @@ export const loginSchema = z.object({
   password: z.string().trim().min(1),
 });
 
+export const staffLoginSchema = z.object({
+  email: z.string().trim().toLowerCase().min(1),
+  password: z.string().min(1),
+});
+
 export const resetPasswordSchema = z.object({
   email: z.string().trim().toLowerCase(),
   tempPassword: z.string().trim().min(1),

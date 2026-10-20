@@ -8,6 +8,10 @@ import { prisma } from "@/server/db";
 const MEMBER_SESSION_COOKIE = "spotter_session";
 const SESSION_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
 
+const STAFF_SESSION_COOKIE = "spotter_staff_session";
+const STAFF_SESSION_MAX_AGE_SECONDS = 12 * 60 * 60;
+const STAFF_SESSION_PATH = "/staff";
+
 export interface SessionData {
   memberId: string;
   email: string | null;
@@ -17,8 +21,40 @@ export interface SessionData {
   emailVerified: boolean;
 }
 
-function signToken(token: string): string {
-  return createHmac("sha256", env.SESSION_SECRET).update(token).digest("base64url");
+export interface StaffSessionData {
+  staffId: string;
+  gymId: string;
+  name: string;
+  role: "STAFF" | "OWNER";
+}
+
+function staffSessionSecret(): string {
+  if (!env.STAFF_SESSION_SECRET) {
+    throw new Error(
+      "Missing required environment variable STAFF_SESSION_SECRET. See rules/env.md and .env.example."
+    );
+  }
+
+  if (env.STAFF_SESSION_SECRET === env.SESSION_SECRET) {
+    throw new Error("STAFF_SESSION_SECRET must differ from SESSION_SECRET.");
+  }
+
+  return env.STAFF_SESSION_SECRET;
+}
+
+function staffSessionSecretOrNull(): string | null {
+  if (
+    !env.STAFF_SESSION_SECRET ||
+    env.STAFF_SESSION_SECRET === env.SESSION_SECRET
+  ) {
+    return null;
+  }
+
+  return env.STAFF_SESSION_SECRET;
+}
+
+function signToken(token: string, secret: string): string {
+  return createHmac("sha256", secret).update(token).digest("base64url");
 }
 
 function hashToken(token: string): string {
@@ -37,8 +73,8 @@ function parseCookieValue(value: string): { token: string; signature: string } |
   };
 }
 
-function signatureMatches(token: string, signature: string): boolean {
-  const expected = Buffer.from(signToken(token));
+function signatureMatches(token: string, signature: string, secret: string): boolean {
+  const expected = Buffer.from(signToken(token, secret));
   const received = Buffer.from(signature);
 
   if (expected.length !== received.length) {
@@ -48,13 +84,16 @@ function signatureMatches(token: string, signature: string): boolean {
   return timingSafeEqual(expected, received);
 }
 
-function buildCookieValue(token: string): string {
-  return `${token}.${signToken(token)}`;
+function buildCookieValue(token: string, secret: string): string {
+  return `${token}.${signToken(token, secret)}`;
 }
 
-function parseSignedCookie(value: string): { token: string; signature: string } | null {
+function parseSignedCookie(
+  value: string,
+  secret: string
+): { token: string; signature: string } | null {
   const parsed = parseCookieValue(value);
-  if (!parsed || !signatureMatches(parsed.token, parsed.signature)) {
+  if (!parsed || !signatureMatches(parsed.token, parsed.signature, secret)) {
     return null;
   }
 
@@ -64,7 +103,22 @@ function parseSignedCookie(value: string): { token: string; signature: string } 
 async function lookupSession(token: string) {
   const session = await prisma.memberSession.findUnique({
     where: { tokenHash: hashToken(token) },
-    include: { member: true },
+    select: {
+      id: true,
+      mustChangePassword: true,
+      revokedAt: true,
+      expiresAt: true,
+      member: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          memberNumber: true,
+          emailVerifiedAt: true,
+          deletionRequestedAt: true,
+        },
+      },
+    },
   });
 
   if (
@@ -107,7 +161,7 @@ async function resolveSession() {
     return null;
   }
 
-  const parsed = parseSignedCookie(cookie.value);
+  const parsed = parseSignedCookie(cookie.value, env.SESSION_SECRET);
   if (!parsed) {
     return null;
   }
@@ -139,7 +193,7 @@ export async function createMemberSession(
   });
 
   const cookieStore = await cookies();
-  cookieStore.set(MEMBER_SESSION_COOKIE, buildCookieValue(token), {
+  cookieStore.set(MEMBER_SESSION_COOKIE, buildCookieValue(token, env.SESSION_SECRET), {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
     sameSite: "lax",
@@ -190,7 +244,7 @@ export async function getMemberSessionFromRequest(
     return null;
   }
 
-  const parsed = parseSignedCookie(cookie.value);
+  const parsed = parseSignedCookie(cookie.value, env.SESSION_SECRET);
   if (!parsed) {
     return null;
   }
@@ -238,7 +292,7 @@ export async function destroyMemberSession(): Promise<void> {
 
   if (cookie?.value) {
     const parsed = parseCookieValue(cookie.value);
-    if (parsed && signatureMatches(parsed.token, parsed.signature)) {
+    if (parsed && signatureMatches(parsed.token, parsed.signature, env.SESSION_SECRET)) {
       await prisma.memberSession.updateMany({
         where: { tokenHash: hashToken(parsed.token), revokedAt: null },
         data: { revokedAt: new Date() },
@@ -247,4 +301,155 @@ export async function destroyMemberSession(): Promise<void> {
   }
 
   cookieStore.delete(MEMBER_SESSION_COOKIE);
+}
+
+async function lookupStaffSession(token: string) {
+  const session = await prisma.staffSession.findUnique({
+    where: { tokenHash: hashToken(token) },
+    select: {
+      revokedAt: true,
+      expiresAt: true,
+      staff: {
+        select: {
+          id: true,
+          gymId: true,
+          name: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  if (
+    !session ||
+    session.revokedAt ||
+    session.expiresAt.getTime() <= Date.now()
+  ) {
+    return null;
+  }
+
+  return session;
+}
+
+function buildStaffSessionData(session: {
+  staff: {
+    id: string;
+    gymId: string;
+    name: string;
+    role: "STAFF" | "OWNER";
+  };
+}): StaffSessionData {
+  return {
+    staffId: session.staff.id,
+    gymId: session.staff.gymId,
+    name: session.staff.name,
+    role: session.staff.role,
+  };
+}
+
+/**
+ * Creates a staff session row and sets the signed staff session cookie.
+ */
+export async function createStaffSession(staffId: string): Promise<void> {
+  const secret = staffSessionSecret();
+  const token = randomBytes(32).toString("base64url");
+
+  await prisma.staffSession.create({
+    data: {
+      staffId,
+      tokenHash: hashToken(token),
+      expiresAt: new Date(Date.now() + STAFF_SESSION_MAX_AGE_SECONDS * 1000),
+    },
+  });
+
+  const cookieStore = await cookies();
+  cookieStore.set(STAFF_SESSION_COOKIE, buildCookieValue(token, secret), {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: STAFF_SESSION_PATH,
+    maxAge: STAFF_SESSION_MAX_AGE_SECONDS,
+  });
+}
+
+/**
+ * Reads and validates the current staff session.
+ */
+export async function getStaffSession(): Promise<StaffSessionData | null> {
+  const secret = staffSessionSecretOrNull();
+  if (!secret) {
+    return null;
+  }
+
+  const cookieStore = await cookies();
+  const cookie = cookieStore.get(STAFF_SESSION_COOKIE);
+
+  if (!cookie?.value) {
+    return null;
+  }
+
+  const parsed = parseSignedCookie(cookie.value, secret);
+  if (!parsed) {
+    return null;
+  }
+
+  const session = await lookupStaffSession(parsed.token);
+  if (!session) {
+    return null;
+  }
+
+  return buildStaffSessionData(session);
+}
+
+export async function getStaffSessionFromRequest(
+  request: NextRequest
+): Promise<StaffSessionData | null> {
+  const secret = staffSessionSecretOrNull();
+  if (!secret) {
+    return null;
+  }
+
+  const cookie = request.cookies.get(STAFF_SESSION_COOKIE);
+  if (!cookie?.value) {
+    return null;
+  }
+
+  const parsed = parseSignedCookie(cookie.value, secret);
+  if (!parsed) {
+    return null;
+  }
+
+  const session = await lookupStaffSession(parsed.token);
+  if (!session) {
+    return null;
+  }
+
+  return buildStaffSessionData(session);
+}
+
+/**
+ * Clears the staff session cookie and revokes its session row.
+ */
+export async function destroyStaffSession(): Promise<void> {
+  const cookieStore = await cookies();
+  const cookie = cookieStore.get(STAFF_SESSION_COOKIE);
+  const secret = staffSessionSecretOrNull();
+
+  if (cookie?.value && secret) {
+    const parsed = parseCookieValue(cookie.value);
+    if (parsed && signatureMatches(parsed.token, parsed.signature, secret)) {
+      await prisma.staffSession.updateMany({
+        where: { tokenHash: hashToken(parsed.token), revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+  }
+
+  cookieStore.set(STAFF_SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: STAFF_SESSION_PATH,
+    maxAge: 0,
+  });
 }

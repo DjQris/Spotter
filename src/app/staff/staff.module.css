@@ -1,0 +1,253 @@
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
+  background-color: var(--color-background);
+  color: var(--color-on-background);
+}
+
+.topBar {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.brand {
+  color: var(--color-primary);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.topBarNote {
+  color: var(--color-on-surface-variant);
+}
+
+.shell {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.loginShell {
+  width: 100%;
+  max-width: 440px;
+}
+
+.card {
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.cardHeader {
+  padding: 1.75rem 1.75rem 1.25rem;
+  border-bottom: 1px solid var(--color-outline-variant);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eyebrow {
+  align-self: flex-start;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: 0.25rem 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.title {
+  color: var(--color-on-surface);
+  margin: 0.25rem 0 0 0;
+  font-weight: 600;
+}
+
+.subtitle {
+  color: var(--color-on-surface-variant);
+  margin: 0;
+}
+
+.cardBody {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--color-outline-variant);
+  padding-bottom: 1rem;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.whoName {
+  color: var(--color-on-surface);
+  font-weight: 600;
+}
+
+.whoRole {
+  color: var(--color-on-surface-variant);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  color: var(--color-on-surface);
+  font-weight: 500;
+}
+
+.input {
+  background-color: var(--color-surface-container);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-outline);
+  padding: 0.75rem 0.85rem;
+  font-family: inherit;
+  font-size: 1rem;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.button {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border: none;
+  padding: 0.9375rem 1.125rem;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: var(--typography-label-large-font-family);
+  font-size: var(--typography-label-large-font-size);
+  line-height: var(--typography-label-large-line-height);
+  font-weight: var(--typography-label-large-font-weight);
+  letter-spacing: var(--typography-label-large-letter-spacing);
+  box-shadow: none;
+  width: 100%;
+  transition: background-color 0.15s ease;
+}
+
+.button:hover:not(:disabled) {
+  background-color: var(--color-on-primary-container);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  background-color: transparent;
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-outline);
+  padding: 0.65rem 0.9rem;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.secondaryButton:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.error {
+  background-color: var(--color-error-container);
+  color: var(--color-on-error-container);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-error);
+  box-shadow: none;
+}
+
+.result {
+  background-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  border: 1px solid var(--color-primary);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.resultLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.resultValue {
+  font-family: var(--typography-headline-large-font-family);
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  color: var(--color-on-surface-variant);
+  margin: 0;
+  max-width: 62ch;
+}
+
+.buttonRow {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.logoutForm {
+  margin: 0;
+}
+
+.footer {
+  color: var(--color-on-surface-variant);
+  text-align: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

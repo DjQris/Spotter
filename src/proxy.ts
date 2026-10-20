@@ -1,24 +1,34 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getMemberSessionFromRequest } from "@/server/auth/session";
+import {
+  getMemberSessionFromRequest,
+  getStaffSessionFromRequest,
+} from "@/server/auth/session";
 
-const PROTECTED_PATH_PREFIXES: string[] = [];
+const STAFF_PUBLIC_PATHS = new Set(["/staff/login"]);
 
-function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
+function isStaffPath(pathname: string): boolean {
+  return pathname === "/staff" || pathname.startsWith("/staff/");
 }
 
 export async function proxy(request: NextRequest) {
-  const session = await getMemberSessionFromRequest(request);
-
-  if (!session && isProtectedPath(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL("/auth", request.url));
-  }
-
+  const { pathname } = request.nextUrl;
   const headers = new Headers(request.headers);
   headers.delete("x-member-id");
   headers.delete("x-member-name");
+  headers.delete("x-staff-id");
+  headers.delete("x-staff-role");
+
+  if (isStaffPath(pathname)) {
+    const staffSession = await getStaffSessionFromRequest(request);
+
+    if (!staffSession && !STAFF_PUBLIC_PATHS.has(pathname)) {
+      return NextResponse.redirect(new URL("/staff/login", request.url));
+    }
+
+    return NextResponse.next({ request: { headers } });
+  }
+
+  const session = await getMemberSessionFromRequest(request);
 
   if (session) {
     headers.set("x-member-id", session.memberId);

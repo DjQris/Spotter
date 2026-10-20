@@ -98,6 +98,7 @@ model Gym {
   staff       Staff[]
   plans       MembershipPlan[]
   cards       Card[]
+  memberNumberReservations MemberNumberReservation[]
 }
 
 // PRIVATE. Fetched by exact member ID only, never searched across members.
@@ -164,6 +165,8 @@ model Staff {
   passwordHash          String
   role                  StaffRole
   whatsappNumber        String?
+  failedLoginCount      Int                @default(0)
+  lockedUntil           DateTime?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   sessions              StaffSession[]
@@ -175,6 +178,7 @@ model Staff {
   ledgerEntriesRecorded LedgerEntry[]      @relation("LedgerEntryRecordedBy")
   membershipChanges     MembershipChange[] @relation("MembershipChangeBy")
   audits                AnswerAudit[]
+  memberNumberReservations MemberNumberReservation[] @relation("MemberNumberReservedBy")
 }
 
 model StaffSession {
@@ -188,6 +192,19 @@ model StaffSession {
   revokedAt  DateTime?
 
   @@index([staffId])
+}
+
+model MemberNumberReservation {
+  id               String   @id @default(cuid())
+  gymId            String
+  gym              Gym      @relation(fields: [gymId], references: [id])
+  memberNumber     String
+  createdByStaffId String
+  createdBy        Staff    @relation("MemberNumberReservedBy", fields: [createdByStaffId], references: [id])
+  createdAt        DateTime @default(now())
+
+  @@unique([gymId, memberNumber])
+  @@index([createdByStaffId, createdAt])
 }
 
 model DeskShift {

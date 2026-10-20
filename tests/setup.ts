@@ -7,6 +7,8 @@ if (existsSync(envPath)) {
   process.loadEnvFile(envPath);
 }
 
+process.env.STAFF_SESSION_SECRET ??= "test-staff-session-secret";
+
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 
 if (testDatabaseUrl) {
