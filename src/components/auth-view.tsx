@@ -340,7 +340,7 @@ function SignUpView() {
         acceptedPrivacy,
       },
       {
-        onSuccess: () => router.push("/"),
+        onSuccess: () => router.replace("/"),
         onError: (error) => setErrorMsg(error.message || copy.signup.memberNumberNotFound),
       }
     );

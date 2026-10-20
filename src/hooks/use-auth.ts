@@ -67,6 +67,7 @@ interface ResendVerificationResponse {
   alreadyVerified?: boolean;
 }
 
+
 const SESSION_KEY = ["auth", "session"] as const;
 
 async function postJson<T>(

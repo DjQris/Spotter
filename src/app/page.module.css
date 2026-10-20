@@ -65,7 +65,7 @@
   color: var(--color-on-surface);
   border: 1px solid var(--color-outline-strong);
   padding: 0.9375rem 1.125rem;
-  border-radius: 0.5rem;
+  border-radius: 0;
   text-decoration: none;
   font-family: var(--typography-label-large-font-family);
   font-size: var(--typography-label-large-font-size);
@@ -111,6 +111,7 @@
 
 .menuButton {
   display: none;
+  border-radius: 0;
 }
 
 .mobileMenu {
@@ -144,6 +145,7 @@
   justify-content: center;
   background: none;
   border: none;
+  border-radius: 0;
   padding: 0.25rem;
   cursor: pointer;
   color: var(--color-on-surface);
@@ -387,6 +389,7 @@
   background-color: var(--color-surface-container);
   color: var(--color-on-surface);
   border: 1px solid var(--color-outline-strong);
+  border-radius: 0;
   padding: 0.75rem 1rem;
   text-align: left;
   cursor: pointer;
@@ -451,6 +454,7 @@
 .footerLink {
   background: none;
   border: none;
+  border-radius: 0;
   padding: 0;
   cursor: pointer;
   color: var(--color-on-surface-variant);
@@ -520,6 +524,7 @@
   background-color: var(--color-primary);
   color: var(--color-on-primary);
   border: 1px solid var(--color-primary);
+  border-radius: 0;
   padding: 0.55rem 1rem;
   font-family: inherit;
   font-weight: 600;
@@ -534,6 +539,7 @@
 .verifyResendButton {
   background: none;
   border: none;
+  border-radius: 0;
   padding: 0.55rem 0;
   color: var(--color-primary);
   font-family: inherit;
@@ -578,6 +584,7 @@
 .deleteLink {
   background: none;
   border: none;
+  border-radius: 0;
   padding: 0;
   color: var(--color-error, #ba1a1a);
   font-family: inherit;
@@ -591,6 +598,7 @@
   background-color: var(--color-error, #ba1a1a);
   color: #ffffff;
   border: 1px solid var(--color-error, #ba1a1a);
+  border-radius: 0;
   padding: 0.55rem 1rem;
   font-family: inherit;
   font-weight: 600;
@@ -601,3 +609,4 @@
   opacity: 0.6;
   cursor: default;
 }
+
