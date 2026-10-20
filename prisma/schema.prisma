@@ -121,6 +121,7 @@ model Member {
   emailVerifiedAt       DateTime?
   emailVerificationCodeHash  String?
   emailVerificationExpiresAt DateTime?
+  onboardingCompletedAt DateTime?
   deletionRequestedAt   DateTime?
   deletedAt             DateTime?
   failedLoginCount      Int                @default(0)
