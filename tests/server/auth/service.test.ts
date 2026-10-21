@@ -62,6 +62,9 @@ describe.skipIf(!hasTestDatabase)("auth service", () => {
   beforeEach(async () => {
     cookieStore.clear();
     await prisma.memberSession.deleteMany();
+    await prisma.memberNumberReservation.deleteMany();
+    await prisma.staffSession.deleteMany();
+    await prisma.staff.deleteMany();
     await prisma.member.deleteMany();
     await prisma.gym.deleteMany();
   });
@@ -94,6 +97,48 @@ describe.skipIf(!hasTestDatabase)("auth service", () => {
     const stored = await prisma.member.findUnique({ where: { id: member.id } });
     expect(stored?.email).toBe("existing@example.com");
     expect(stored?.accountCreatedAt?.toISOString()).toBe(member.accountCreatedAt?.toISOString());
+  });
+
+  it("rejects sign up when the member number is reserved for another email", async () => {
+    const { gym, member } = await createGymWithMember({
+      memberNumber: "100003",
+      email: null,
+      passwordHash: null,
+    });
+
+    const staff = await prisma.staff.create({
+      data: {
+        gym: { connect: { id: gym.id } },
+        name: "Reception Staff",
+        email: "desk@example.com",
+        passwordHash: "not-used-by-this-test",
+        role: { connect: { key: "STAFF" } },
+      },
+    });
+
+    await prisma.memberNumberReservation.create({
+      data: {
+        gymId: gym.id,
+        memberNumber: "100003",
+        email: "right@example.com",
+        createdByStaffId: staff.id,
+      },
+    });
+
+    const result = await signUpMember({
+      name: "Wrong Person",
+      email: "wrong@example.com",
+      password: "correct-horse-battery-staple",
+      memberNumber: "100003",
+      acceptedPrivacy: true,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(copy.signup.memberNumberReservedForAnotherEmail);
+
+    const stored = await prisma.member.findUnique({ where: { id: member.id } });
+    expect(stored?.email).toBeNull();
+    expect(stored?.accountCreatedAt).toBeNull();
   });
 
   it("revokes every other session when the password changes", async () => {

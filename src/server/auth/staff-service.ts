@@ -4,6 +4,7 @@ import { copy } from "@/lib/copy";
 import { prisma } from "@/server/db";
 import { isIpBlocked, recordIpFailure } from "./rate-limit";
 import {
+  buildStaffSessionData,
   createStaffSession,
   destroyStaffSession,
   type StaffSessionData,
@@ -46,7 +47,20 @@ export async function loginStaff(input: StaffLoginInput): Promise<StaffAuthResul
     return failure();
   }
 
-  const staff = await prisma.staff.findUnique({ where: { email } });
+  const staff = await prisma.staff.findUnique({
+    where: { email },
+    include: {
+      role: {
+        include: {
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
   if (staff?.lockedUntil && staff.lockedUntil.getTime() > Date.now()) {
     await verify(DUMMY_PASSWORD_HASH, password).catch(() => false);
@@ -72,12 +86,7 @@ export async function loginStaff(input: StaffLoginInput): Promise<StaffAuthResul
 
     return {
       success: true,
-      session: {
-        staffId: staff.id,
-        gymId: staff.gymId,
-        name: staff.name,
-        role: staff.role,
-      },
+      session: buildStaffSessionData(staff),
     };
   }
 

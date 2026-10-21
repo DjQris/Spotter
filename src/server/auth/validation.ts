@@ -24,6 +24,10 @@ export const staffLoginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const reserveMemberNumberSchema = z.object({
+  email: z.string().trim().toLowerCase().regex(EMAIL_PATTERN),
+});
+
 export const resetPasswordSchema = z.object({
   email: z.string().trim().toLowerCase(),
   tempPassword: z.string().trim().min(1),

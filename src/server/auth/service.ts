@@ -4,6 +4,7 @@ import { hash, verify } from "@node-rs/argon2";
 import { Prisma } from "@prisma/client";
 import { copy } from "@/lib/copy";
 import { prisma } from "@/server/db";
+import { getReservationEmail } from "@/server/membership/member-numbers";
 import { checkBreachedPassword } from "./breached-password";
 import { isIpBlocked, recordIpFailure } from "./rate-limit";
 import {
@@ -157,6 +158,12 @@ export async function signUpMember(input: SignUpInput): Promise<AuthResult> {
 
   if (!member) {
     return failure(copy.signup.memberNumberNotFound);
+  }
+
+  const reservationEmail = await getReservationEmail(gym.id, memberNumber);
+
+  if (reservationEmail && reservationEmail !== email) {
+    return failure(copy.signup.memberNumberReservedForAnotherEmail);
   }
 
   const passwordHash = await hashPasswordValue(password);

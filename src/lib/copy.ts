@@ -32,6 +32,8 @@ export const copy = {
     memberNumberAlreadyHasAccount:
       "That member number already has an account. Ask the front desk for help.",
     emailAlreadyRegistered: "That email is already registered.",
+    memberNumberReservedForAnotherEmail:
+      "That member number was reserved for another email address. Ask the front desk for help.",
     passwordMinLength: "Use at least eight characters.",
     passwordBreached:
       "That password has appeared in a data breach. Choose a different one.",
@@ -118,18 +120,25 @@ export const copy = {
     loginFailed: "That email and password do not match.",
     signInUnavailable: "Staff sign-in is temporarily unavailable.",
     dashboardTitle: "Reception desk",
-    dashboardSubtitle: "Reserve a member number for an intending member.",
+    dashboardSubtitle:
+      "Generate a member number and email it to an intending member.",
     signedInAs: "Signed in as",
     signOut: "Sign out",
+    memberEmailLabel: "Member's email address",
     reserveButton: "Generate member number",
-    reserving: "Reserving...",
-    reserveAgain: "Reserve another number",
-    reserveFailed: "Could not reserve a member number. Try again.",
-    reserveUnavailable: "Member number reservation is not available right now.",
-    reservedTitle: "Member number reserved",
-    reservedHint:
-      "Give this number to the intending member. The owner must create her member record before she can sign up.",
-    latestTitle: "Your most recent reservation",
+    generateButton: "Generate number",
+    generating: "Generating...",
+    reserveAgain: "Generate another number",
+    reserveFailed: "Could not generate a member number. Try again.",
+    reserveUnavailable: "Member number generation is not available right now.",
+    reservedTitle: "Member number generated",
+    reservedHintEmailSent:
+      "We emailed this number to the member. The owner must create her member record before she can sign up.",
+    reservedHintEmailFailed:
+      "The number was generated, but the email could not be sent. Give the number to the member. The owner must create her member record before she can sign up.",
+    latestHint:
+      "Give this number to the member. The owner must create her member record before she can sign up.",
+    latestTitle: "Your most recent member number",
     roleOwner: "Owner",
     roleStaff: "Reception",
     noPermission: "You do not have permission to use this dashboard.",
@@ -163,6 +172,14 @@ export const copy = {
     ],
     footer:
       "You received this email because you created a Spotter account. If this was not you, speak to the front desk.",
+  },
+  memberNumberEmail: {
+    subject: "Your Spotter member number",
+    greeting: "Hello,",
+    heading: "Your member number",
+    intro: "Use this member number to create your Spotter account.",
+    footer:
+      "You received this email because the front desk generated a member number for this address. If this was not you, speak to the front desk.",
   },
   verificationEmail: {
     subject: "Verify your email for Spotter",

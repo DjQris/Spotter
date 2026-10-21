@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import StaffDashboard from "@/components/staff/staff-dashboard";
+import { PERMISSIONS } from "@/lib/permissions";
+import { staffCan } from "@/server/auth/authorization";
 import { getStaffSession } from "@/server/auth/session";
 import { getLatestReservation } from "@/server/membership/member-numbers";
 
@@ -13,11 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function StaffPage() {
   const session = await getStaffSession();
 
-  if (!session) {
-    redirect("/staff/login");
-  }
-
-  if (session.role !== "STAFF" && session.role !== "OWNER") {
+  if (!session || !staffCan(session, PERMISSIONS.STAFF_DASHBOARD_ACCESS)) {
     redirect("/staff/login");
   }
 

@@ -78,6 +78,12 @@ included in any owner screen response, and never embedded.
 An email address is a private field. It appears on owner screens, because the
 owner needs it to identify a member, and nowhere else.
 
+A member number reservation stores the email address it was generated for. That
+address is used only to send the number and to refuse a different email at sign
+up. It is never shown on the staff dashboard or returned in a response.
+
+Retention for unused reservations is not defined. Ask before adding a purge.
+
 ## Model calls and private data
 
 rules/ai.md owns the rule that the model never receives a private record and

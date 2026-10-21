@@ -3,9 +3,15 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { copy } from "@/lib/copy";
+import { PERMISSIONS } from "@/lib/permissions";
+import { staffCan } from "@/server/auth/authorization";
 import { getStaffSession } from "@/server/auth/session";
 import { loginStaff, logoutStaff } from "@/server/auth/staff-service";
-import { staffLoginSchema } from "@/server/auth/validation";
+import {
+  reserveMemberNumberSchema,
+  staffLoginSchema,
+} from "@/server/auth/validation";
+import { sendMemberNumberEmail } from "@/server/email/member-number-email";
 import { reserveMemberNumber } from "@/server/membership/member-numbers";
 import type {
   ReserveMemberNumberActionState,
@@ -59,7 +65,6 @@ export async function reserveMemberNumberAction(
   formData: FormData
 ): Promise<ReserveMemberNumberActionState> {
   void previousState;
-  void formData;
 
   const session = await getStaffSession();
 
@@ -67,21 +72,49 @@ export async function reserveMemberNumberAction(
     redirect("/staff/login");
   }
 
-  if (session.role !== "STAFF" && session.role !== "OWNER") {
+  if (!staffCan(session, PERMISSIONS.MEMBER_NUMBER_RESERVE)) {
     return { status: "error", error: copy.staff.noPermission };
+  }
+
+  const parsed = reserveMemberNumberSchema.safeParse({
+    email: formData.get("email"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", error: copy.validation.emailInvalid };
   }
 
   try {
     const result = await reserveMemberNumber({
       gymId: session.gymId,
       staffId: session.staffId,
+      email: parsed.data.email,
     });
 
     if (!result.success || !result.memberNumber) {
       return { status: "error", error: copy.staff.reserveFailed };
     }
 
-    return { status: "success", memberNumber: result.memberNumber };
+    let emailSent = true;
+
+    try {
+      await sendMemberNumberEmail({
+        to: parsed.data.email,
+        memberNumber: result.memberNumber,
+      });
+    } catch (error) {
+      emailSent = false;
+      console.error(
+        "Member number email failed:",
+        error instanceof Error ? error.name : "unknown"
+      );
+    }
+
+    return {
+      status: "success",
+      memberNumber: result.memberNumber,
+      emailSent,
+    };
   } catch {
     return { status: "error", error: copy.staff.reserveUnavailable };
   }

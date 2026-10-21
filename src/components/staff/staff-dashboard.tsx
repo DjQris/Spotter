@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   logoutStaffAction,
   reserveMemberNumberAction,
@@ -14,7 +14,7 @@ const INITIAL_STATE: ReserveMemberNumberActionState = { status: "idle" };
 interface StaffDashboardProps {
   staff: {
     name: string;
-    role: "STAFF" | "OWNER";
+    role: string;
   };
   latestMemberNumber: string | null;
 }
@@ -27,11 +27,17 @@ export default function StaffDashboard({
     reserveMemberNumberAction,
     INITIAL_STATE
   );
+  const [showForm, setShowForm] = useState(false);
 
   const isFresh = state.status === "success";
   const reservedNumber = isFresh ? state.memberNumber : latestMemberNumber;
   const roleLabel =
     staff.role === "OWNER" ? copy.staff.roleOwner : copy.staff.roleStaff;
+  const resultHint = isFresh
+    ? state.emailSent
+      ? copy.staff.reservedHintEmailSent
+      : copy.staff.reservedHintEmailFailed
+    : copy.staff.latestHint;
 
   return (
     <main className={styles.page}>
@@ -92,7 +98,7 @@ export default function StaffDashboard({
                 </span>
                 <span className={styles.resultValue}>#{reservedNumber}</span>
                 <p className={`text-body-small ${styles.hint}`}>
-                  {copy.staff.reservedHint}
+                  {resultHint}
                 </p>
               </div>
             )}
@@ -103,19 +109,51 @@ export default function StaffDashboard({
               </div>
             )}
 
-            <form action={formAction}>
+            {showForm ? (
+              <form
+                key={state.memberNumber ?? "new"}
+                action={formAction}
+                className={styles.reserveForm}
+              >
+                <div className={styles.field}>
+                  <label
+                    htmlFor="member-email"
+                    className={`text-label-medium ${styles.label}`}
+                  >
+                    {copy.staff.memberEmailLabel}
+                  </label>
+                  <input
+                    id="member-email"
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    className={`text-body-medium ${styles.input}`}
+                    placeholder="member@example.com"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className={styles.button}
+                >
+                  {pending
+                    ? copy.staff.generating
+                    : copy.staff.generateButton}
+                </button>
+              </form>
+            ) : (
               <button
-                type="submit"
-                disabled={pending}
+                type="button"
+                onClick={() => setShowForm(true)}
                 className={styles.button}
               >
-                {pending
-                  ? copy.staff.reserving
-                  : reservedNumber
-                    ? copy.staff.reserveAgain
-                    : copy.staff.reserveButton}
+                {reservedNumber
+                  ? copy.staff.reserveAgain
+                  : copy.staff.reserveButton}
               </button>
-            </form>
+            )}
           </div>
         </section>
       </div>

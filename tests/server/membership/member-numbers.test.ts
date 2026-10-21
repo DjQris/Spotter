@@ -30,11 +30,11 @@ describe.skipIf(!hasTestDatabase)("member number reservation", () => {
 
     const staff = await prisma.staff.create({
       data: {
-        gymId: gym.id,
+        gym: { connect: { id: gym.id } },
         name: "Reception Staff",
         email: "reception@example.com",
         passwordHash: "not-used-by-this-test",
-        role: "STAFF",
+        role: { connect: { key: "STAFF" } },
       },
     });
 
@@ -47,10 +47,12 @@ describe.skipIf(!hasTestDatabase)("member number reservation", () => {
     const first = await reserveMemberNumber({
       gymId: gym.id,
       staffId: staff.id,
+      email: "member@example.com",
     });
     const second = await reserveMemberNumber({
       gymId: gym.id,
       staffId: staff.id,
+      email: "member@example.com",
     });
 
     expect(first.success).toBe(true);
@@ -66,6 +68,9 @@ describe.skipIf(!hasTestDatabase)("member number reservation", () => {
 
     expect(reservations).toHaveLength(2);
     expect(reservations.every((row) => row.createdByStaffId === staff.id)).toBe(
+      true
+    );
+    expect(reservations.every((row) => row.email === "member@example.com")).toBe(
       true
     );
 

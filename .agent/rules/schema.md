@@ -83,6 +83,12 @@ One account per member record
 - Reason: two accounts on one record means two people reading one member's
   private data.
 
+Member number email binding
+- A reservation may carry the email address it was generated for. Sign up
+  refuses any other email for that member number.
+- This is enforced in the sign up path, not by a database constraint, because
+  reservations made before the binding existed have no email.
+
 Active check in codes are unique
 - No two unconsumed, unexpired codes may hold the same digits.
 - This cannot be expressed as a plain unique constraint, because it applies only

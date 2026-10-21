@@ -13,11 +13,6 @@ enum Tier {
   PREMIUM
 }
 
-enum StaffRole {
-  OWNER
-  STAFF
-}
-
 enum PaymentPurpose {
   RENEWAL
   ARREARS
@@ -101,6 +96,34 @@ model Gym {
   memberNumberReservations MemberNumberReservation[]
 }
 
+model Role {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  name        String
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  staff       Staff[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
 // PRIVATE. Fetched by exact member ID only, never searched across members.
 model Member {
   id                    String             @id @default(cuid())
@@ -163,7 +186,8 @@ model Staff {
   name                  String
   email                 String             @unique
   passwordHash          String
-  role                  StaffRole
+  roleId                String
+  role                  Role               @relation(fields: [roleId], references: [id])
   whatsappNumber        String?
   failedLoginCount      Int                @default(0)
   lockedUntil           DateTime?
@@ -199,6 +223,7 @@ model MemberNumberReservation {
   gymId            String
   gym              Gym      @relation(fields: [gymId], references: [id])
   memberNumber     String
+  email            String?
   createdByStaffId String
   createdBy        Staff    @relation("MemberNumberReservedBy", fields: [createdByStaffId], references: [id])
   createdAt        DateTime @default(now())

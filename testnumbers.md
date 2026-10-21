@@ -55,3 +55,6 @@ Sessions -> Logs in
 # Receptionist/Admin flow
 - Create a dashboard for the receptionist to use in creating member numbers
 - protected route
+- Git pull
+
+- # RBAC 

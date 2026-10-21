@@ -5,5 +5,6 @@ export interface StaffLoginActionState {
 export interface ReserveMemberNumberActionState {
   status: "idle" | "success" | "error";
   memberNumber?: string;
+  emailSent?: boolean;
   error?: string;
 }

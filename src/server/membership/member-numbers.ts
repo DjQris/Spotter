@@ -7,9 +7,13 @@ const MEMBER_NUMBER_MIN = 100000;
 const MEMBER_NUMBER_MAX = 1000000;
 const RESERVATION_ATTEMPTS = 10;
 
-export interface ReserveMemberNumberInput {
+export interface ReservationScope {
   gymId: string;
   staffId: string;
+}
+
+export interface ReserveMemberNumberInput extends ReservationScope {
+  email: string;
 }
 
 export interface ReserveMemberNumberResult {
@@ -28,6 +32,8 @@ function generateCandidate(): string {
 export async function reserveMemberNumber(
   input: ReserveMemberNumberInput
 ): Promise<ReserveMemberNumberResult> {
+  const email = input.email.trim().toLowerCase();
+
   for (let attempt = 0; attempt < RESERVATION_ATTEMPTS; attempt += 1) {
     const memberNumber = generateCandidate();
 
@@ -36,6 +42,7 @@ export async function reserveMemberNumber(
         data: {
           gymId: input.gymId,
           memberNumber,
+          email,
           createdByStaffId: input.staffId,
         },
       });
@@ -57,7 +64,7 @@ export async function reserveMemberNumber(
 }
 
 export async function getLatestReservation(
-  input: ReserveMemberNumberInput
+  input: ReservationScope
 ): Promise<LatestReservation | null> {
   return prisma.memberNumberReservation.findFirst({
     where: {
@@ -69,4 +76,16 @@ export async function getLatestReservation(
       memberNumber: true,
     },
   });
+}
+
+export async function getReservationEmail(
+  gymId: string,
+  memberNumber: string
+): Promise<string | null | undefined> {
+  const reservation = await prisma.memberNumberReservation.findUnique({
+    where: { gymId_memberNumber: { gymId, memberNumber } },
+    select: { email: true },
+  });
+
+  return reservation?.email;
 }

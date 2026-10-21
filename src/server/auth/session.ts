@@ -25,7 +25,8 @@ export interface StaffSessionData {
   staffId: string;
   gymId: string;
   name: string;
-  role: "STAFF" | "OWNER";
+  role: string;
+  permissions: string[];
 }
 
 function staffSessionSecret(): string {
@@ -314,7 +315,18 @@ async function lookupStaffSession(token: string) {
           id: true,
           gymId: true,
           name: true,
-          role: true,
+          role: {
+            select: {
+              key: true,
+              permissions: {
+                select: {
+                  permission: {
+                    select: { key: true },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -331,19 +343,25 @@ async function lookupStaffSession(token: string) {
   return session;
 }
 
-function buildStaffSessionData(session: {
-  staff: {
-    id: string;
-    gymId: string;
-    name: string;
-    role: "STAFF" | "OWNER";
+interface StaffWithRole {
+  id: string;
+  gymId: string;
+  name: string;
+  role: {
+    key: string;
+    permissions: Array<{ permission: { key: string } }>;
   };
-}): StaffSessionData {
+}
+
+export function buildStaffSessionData(staff: StaffWithRole): StaffSessionData {
   return {
-    staffId: session.staff.id,
-    gymId: session.staff.gymId,
-    name: session.staff.name,
-    role: session.staff.role,
+    staffId: staff.id,
+    gymId: staff.gymId,
+    name: staff.name,
+    role: staff.role.key,
+    permissions: staff.role.permissions.map(
+      (rolePermission) => rolePermission.permission.key
+    ),
   };
 }
 
@@ -398,7 +416,7 @@ export async function getStaffSession(): Promise<StaffSessionData | null> {
     return null;
   }
 
-  return buildStaffSessionData(session);
+  return buildStaffSessionData(session.staff);
 }
 
 export async function getStaffSessionFromRequest(
@@ -424,7 +442,7 @@ export async function getStaffSessionFromRequest(
     return null;
   }
 
-  return buildStaffSessionData(session);
+  return buildStaffSessionData(session.staff);
 }
 
 /**

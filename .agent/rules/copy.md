@@ -69,6 +69,7 @@ The last one is a number, not an error.
   "Enter the member number on your gym card."
   "We could not find that member number. Check it with the front desk."
   "That member number already has an account. Ask the front desk for help."
+  "That member number was reserved for another email address. Ask the front desk for help."
   "That email is already registered."
   "Use at least eight characters."
   "That password has appeared in a data breach. Choose a different one."
@@ -265,6 +266,18 @@ line.
 The subject line is the first string. The greeting carries the only
 substitution. The email is sent once, in the background, the moment the account
 is created. It is triggered by the member's own sign up, not by the gym.
+
+## Member number email
+
+  "Your Spotter member number"
+  "Hello,"
+  "Your member number"
+  "Use this member number to create your Spotter account."
+  "You received this email because the front desk generated a member number
+  for this address. If this was not you, speak to the front desk."
+
+The subject line is the first string. This email is sent when the front desk
+generates a member number for an email address.
 
 ## Verification email
 
